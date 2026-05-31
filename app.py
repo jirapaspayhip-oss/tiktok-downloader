@@ -3,9 +3,6 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# แก้ไขลิงก์เป็นเพลงแดนซ์ใหม่ล่าสุดของคุณเรียบร้อยครับ
-MUSIC_URL = "https://audio.jofreestyler.com/api2/download/d1f8dae8499252a10cd2d6995ee74390/7636781163884973330.mp3"
-
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="th">
@@ -133,10 +130,6 @@ HTML_TEMPLATE = """
 </head>
 <body>
 
-    <audio id="bg-music" autoplay loop>
-        <source src="{{ music_url }}" type="audio/mpeg">
-    </audio>
-
     <div class="container">
         <h1>TikTok Downloader</h1>
         <div class="subtitle">วางลิ้งก์วิดีโอ TikTok เพื่อดาวน์โหลดแบบไม่มีลายน้ำ</div>
@@ -158,15 +151,6 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
-        const audio = document.getElementById('bg-music');
-
-        // สั่งให้เพลงเล่นทันทีเมื่อคลิกหน้าจอครั้งแรก ตามกฎของบราวเซอร์
-        document.body.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play().catch(e => console.log("Autoplay blocked"));
-            }
-        }, { once: true });
-
         async function getTiktokVideo() {
             const urlInput = document.getElementById('tiktokUrl').value.trim();
             const searchBtn = document.getElementById('searchBtn');
@@ -238,7 +222,7 @@ def get_tiktok_video(url):
 
 @app.route('/')
 def index():
-    return render_template_string(HTML_TEMPLATE, music_url=MUSIC_URL)
+    return render_template_string(HTML_TEMPLATE)
 
 @app.route('/api/download', methods=['POST'])
 def download():
