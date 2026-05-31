@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# ลิงก์ตรงของเพลงใหม่ที่คุณส่งมา (ออนแอร์เปิดใช้งานได้ 24 ชม.)
+# เปลี่ยนลิงก์เพลงเป็นเพลงแดนซ์อันใหม่ล่าสุดของคุณเรียบร้อยแล้ว
 MUSIC_URL = "https://audio.jofreestyler.com/api2/download/d1f8dae8499252a10cd2d6995ee74390/7636781163884973330.mp3"
 
 HTML_TEMPLATE = """
@@ -129,30 +129,12 @@ HTML_TEMPLATE = """
             margin-top: 15px;
             font-size: 14px;
         }
-        .music-control {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            z-index: 100;
-            transition: all 0.2s;
-        }
-        .music-control:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
     </style>
 </head>
 <body>
 
-    <button class="music-control" id="musicBtn" onclick="toggleMusic()">🎵 เล่นเพลง</button>
-
-    <audio id="bg-music" loop>
+    <!-- ดึงไฟล์เพลงจากลิงก์ด้านบนมาเล่นแบบวนลูปอัตโนมัติ -->
+    <audio id="bg-music" autoplay loop>
         <source src="{{ music_url }}" type="audio/mpeg">
     </audio>
 
@@ -178,25 +160,13 @@ HTML_TEMPLATE = """
 
     <script>
         const audio = document.getElementById('bg-music');
-        const musicBtn = document.getElementById('musicBtn');
 
+        // สั่งให้เพลงเริ่มเล่นทันทีเมื่อผู้ใช้คลิกเมาส์ส่วนไหนก็ได้ของหน้าจอครั้งแรก (เพื่อเลี่ยงกฎความปลอดภัยบราวเซอร์)
         document.body.addEventListener('click', () => {
-            if (audio.paused && musicBtn.innerText === "🎵 เล่นเพลง") {
-                audio.play().then(() => {
-                    musicBtn.innerText = "⏸️ หยุดเพลง";
-                }).catch(e => console.log("Autoplay blocked"));
+            if (audio.paused) {
+                audio.play().catch(e => console.log("Autoplay blocked"));
             }
         }, { once: true });
-
-        function toggleMusic() {
-            if (audio.paused) {
-                audio.play();
-                musicBtn.innerText = "⏸️ หยุดเพลง";
-            } else {
-                audio.pause();
-                musicBtn.innerText = "🎵 เล่นเพลง";
-            }
-        }
 
         async function getTiktokVideo() {
             const urlInput = document.getElementById('tiktokUrl').value.trim();
