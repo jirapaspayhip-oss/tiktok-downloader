@@ -1,5 +1,6 @@
+from flask import Flask, request, jsonify, render_template_string, Response
 import requests
-from flask import Flask, request, jsonify, render_template_string
+import re
 
 app = Flask(__name__)
 
@@ -9,216 +10,121 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Downloader - ไม่ติดลายน้ำ</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>⚡ TIKTOK CYBER DOWNLOADER</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Kanit', sans-serif;
-        }
-        body {
-            background-color: #121214;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            overflow: hidden;
-            position: relative;
-        }
-        .container {
-            background: #1e1e24;
-            border: 2px solid #ff0050;
-            border-radius: 16px;
-            padding: 40px 30px;
-            width: 100%;
-            max-width: 480px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(255, 0, 80, 0.2);
-            z-index: 10;
-        }
-        h1 {
-            color: #ff0050;
-            font-size: 28px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .subtitle {
-            color: #a1a1aa;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        input {
-            width: 100%;
-            padding: 16px;
-            background: #2a2a32;
-            border: 1px solid #3f3f46;
-            border-radius: 8px;
-            color: #ffffff;
-            font-size: 15px;
-            outline: none;
-            transition: all 0.3s;
-        }
-        input:focus {
-            border-color: #ff0050;
-            box-shadow: 0 0 8px rgba(255, 0, 80, 0.3);
-        }
-        button {
-            width: 100%;
-            padding: 16px;
-            background: #ff0050;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-        }
-        button:hover {
-            background: #e60048;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        .result-area {
-            margin-top: 25px;
-            display: none;
-        }
-        .video-title {
-            color: #ffffff;
-            font-size: 15px;
-            margin-bottom: 15px;
-            text-align: left;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .download-btn {
-            background: #00f2fe;
-            color: #121214;
-            margin-top: 10px;
-            text-decoration: none;
-            display: block;
-            padding: 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        .download-btn:hover {
-            background: #00d8e4;
-        }
-        .error-msg {
-            color: #ef4444;
-            margin-top: 15px;
-            font-size: 14px;
-            display: none;
-        }
-        .loading {
-            display: none;
-            color: #00f2fe;
-            margin-top: 15px;
-            font-size: 14px;
-        }
+        html, body { cursor: none !important; overflow-x: hidden; }
+        a, button, input, label { cursor: none !important; }
+
+        /* 🖱️ เคอร์เซอร์เมาส์แสงนีออน */
+        .cursor-dot { width: 8px; height: 8px; background-color: #22d3ee; position: fixed; pointer-events: none; z-index: 9999; border-radius: 50%; transform: translate(-50%, -50%); }
+        .cursor-outline { width: 40px; height: 40px; border: 2px solid #ec4899; position: fixed; pointer-events: none; z-index: 9998; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #ec4899, inset 0 0 10px #ec4899; opacity: 0.8; transition: transform 0.08s ease-out, width 0.2s, height 0.2s, border-color 0.2s; }
+        .cursor-hover .cursor-dot { width: 4px; height: 4px; background-color: #ec4899; }
+        .cursor-hover .cursor-outline { width: 55px; height: 55px; border-color: #22d3ee; box-shadow: 0 0 25px #22d3ee, inset 0 0 15px #22d3ee; }
+
+        /* 🎥 วิดีโอพื้นหลัง */
+        .video-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; overflow: hidden; }
+        .video-bg iframe { width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); filter: brightness(0.55) contrast(1.15) saturate(1.1); }
     </style>
 </head>
-<body>
+<body class="bg-slate-950 text-gray-100 min-h-screen flex flex-col items-center justify-center p-4 antialiased font-sans relative">
+    
+    <div class="cursor-dot" id="customDot"></div>
+    <div class="cursor-outline" id="customOutline"></div>
 
-    <div class="container">
-        <h1>TikTok Downloader</h1>
-        <div class="subtitle">วางลิ้งก์วิดีโอ TikTok เพื่อดาวน์โหลดแบบไม่มีลายน้ำ</div>
-        
-        <div class="input-group">
-            <input type="text" id="tiktokUrl" placeholder="วางลิงก์ TikTok ที่นี่... (https://vt.tiktok.com/...)">
+    <div class="video-bg" id="bgContainer"></div>
+
+    <div id="welcomeOverlay" class="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 transition-opacity duration-700">
+        <div class="text-center p-8 rounded-3xl border border-pink-500/30 bg-slate-900/80 backdrop-blur-xl max-w-sm" style="box-shadow: 0 0 30px rgba(236, 72, 153, 0.3);">
+            <h2 class="text-2xl font-black bg-gradient-to-r from-pink-400 to-cyan-400 bg-clip-text text-transparent uppercase mb-2">⚡ SYSTEM READY</h2>
+            <p class="text-xs text-slate-400 mb-6 font-mono">CLICK TO ACTIVATE AUDIO & VIDEO PATH</p>
+            <button id="enterBtn" class="px-8 py-3.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 font-bold rounded-xl shadow-lg uppercase text-xs font-mono tracking-widest transition-all">
+                ENTER SYSTEM
+            </button>
         </div>
-        
-        <button id="searchBtn" onclick="getTiktokVideo()">ค้นหาวิดีโอ</button>
+    </div>
 
-        <div class="loading" id="loadingText">กำลังดึงข้อมูลวิดีโอ กรุณารอสักครู่...</div>
-        <div class="error-msg" id="errorText"></div>
-
-        <div class="result-area" id="resultArea">
-            <div class="video-title" id="videoTitle"></div>
-            <a href="#" class="download-btn" id="dlNoWatermark" target="_blank" download>📥 ดาวน์โหลดวิดีโอ (ไม่มีลายน้ำ)</a>
-            <a href="#" class="download-btn" id="dlMusic" target="_blank" style="background: #a1a1aa; color: white;" download>🎵 ดาวน์โหลดเพลงประกอบ</a>
+    <div class="w-full max-w-md bg-slate-900/75 backdrop-blur-xl p-8 rounded-3xl border border-pink-500/40 relative overflow-hidden" style="box-shadow: 0 0 30px rgba(236, 72, 153, 0.25);">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold tracking-wider bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent uppercase">🔥 TikTok Cyber</h1>
+            <p class="text-[10px] uppercase font-mono tracking-widest text-cyan-400 mt-1">ILLSLICK TRACK + AUDIO SYNCED</p>
+        </div>
+        <form id="downloadForm" class="space-y-5">
+            <input type="url" id="videoUrl" required placeholder="วางลิงก์ TikTok ตรงนี้..." class="w-full px-5 py-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono">
+            <div class="bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800/80 flex justify-between items-center text-xs font-mono">
+                <label class="w-1/2 text-center py-2.5 cursor-pointer flex items-center justify-center space-x-2"><input type="radio" name="downloadType" value="mp4" checked class="accent-pink-500"><span>🎥 VIDEO MP4 HD</span></label>
+                <div class="w-px h-6 bg-slate-800"></div>
+                <label class="w-1/2 text-center py-2.5 cursor-pointer flex items-center justify-center space-x-2"><input type="radio" name="downloadType" value="mp3" class="accent-cyan-400"><span>🎵 AUDIO MP3</span></label>
+            </div>
+            <button type="submit" id="submitBtn" class="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 font-bold rounded-2xl shadow-lg uppercase text-sm font-mono">LAUNCH EXTRACT</button>
+        </form>
+        <div id="resultSection" class="mt-8 hidden border-t border-slate-800 pt-6 text-center">
+            <img id="videoCover" src="" class="w-36 h-36 mx-auto rounded-2xl object-cover border border-slate-700 shadow-2xl mb-4">
+            <p id="videoTitle" class="text-sm text-slate-300 mb-2 px-1 line-clamp-2 text-left bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/50"></p>
+            <p id="videoAuthor" class="text-xs text-cyan-400 mb-5 font-mono font-bold"></p>
+            <a id="downloadBtn" href="" class="block w-full py-4 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-2xl text-center shadow-lg uppercase text-sm font-mono" style="box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);">⚡ DOWNLOAD FILE NOW</a>
         </div>
     </div>
 
     <script>
-        async function getTiktokVideo() {
-            const urlInput = document.getElementById('tiktokUrl').value.trim();
-            const searchBtn = document.getElementById('searchBtn');
-            const loadingText = document.getElementById('loadingText');
-            const errorText = document.getElementById('errorText');
-            const resultArea = document.getElementById('resultArea');
+        const dot = document.getElementById('customDot');
+        const outline = document.getElementById('customOutline');
 
-            if (!urlInput) {
-                alert('กรุณาใส่ลิงก์ TikTok ก่อนครับ');
-                return;
-            }
+        // ควบคุมตำแหน่งเมาส์นีออน
+        window.addEventListener('mousemove', (e) => {
+            dot.style.left = `${e.clientX}px`; dot.style.top = `${e.clientY}px`;
+            outline.style.left = `${e.clientX}px`; outline.style.top = `${e.clientY}px`;
+        });
 
-            searchBtn.disabled = true;
-            loadingText.style.display = 'block';
-            errorText.style.display = 'none';
-            resultArea.style.display = 'none';
-
-            try {
-                const response = await fetch('/api/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ 'url': urlInput })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('videoTitle').innerText = data.title;
-                    document.getElementById('dlNoWatermark').href = data.video_nowatermark;
-                    document.getElementById('dlMusic').href = data.music;
-                    resultArea.style.display = 'block';
-                } else {
-                    errorText.innerText = data.message || 'เกิดข้อผิดพลาด ไม่สามารถดึงวิดีโอได้';
-                    errorText.style.display = 'block';
-                }
-            } catch (error) {
-                errorText.innerText = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง';
-                errorText.style.display = 'block';
-            } finally {
-                searchBtn.disabled = false;
-                loadingText.style.display = 'none';
-            }
+        // จัดการ Hover เมาส์
+        function refreshCursorListeners() {
+            document.querySelectorAll('a, button, input, label').forEach(el => {
+                el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+                el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+            });
         }
+        refreshCursorListeners();
+
+        // 🔊 สคริปต์กดปุ่มเพื่อเล่นเพลงพร้อมวิดีโอ
+        document.getElementById('enterBtn').addEventListener('click', () => {
+            const overlay = document.getElementById('welcomeOverlay');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.remove(), 700); // ลบหน้าต่างต้อนรับออกหลังจางหาย
+
+            // ฝังวิดีโอ YouTube แบบเปิดเสียง (mute=0) และให้เปิดเล่นทันที (autoplay=1)
+            document.getElementById('bgContainer').innerHTML = `<iframe src="https://www.youtube.com/embed/fXw1PERFGMs?autoplay=1&mute=0&loop=1&playlist=fXw1PERFGMs&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        });
+
+        // ระบบดาวน์โหลด TikTok
+        document.getElementById('downloadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('videoUrl').value;
+            const type = document.querySelector('input[name="downloadType"]:checked').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const resultSection = document.getElementById('resultSection');
+            resultSection.classList.add('hidden');
+            submitBtn.innerText = '🛰️ CODESYNC IN PROGRESS...';
+            submitBtn.disabled = true;
+            try {
+                const formData = new FormData(); formData.append('url', url); formData.append('type', type);
+                const response = await fetch('/api/download', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('videoCover').src = data.cover;
+                    document.getElementById('videoTitle').innerText = data.title;
+                    document.getElementById('videoAuthor').innerText = '👤 AUTHOR: @' + data.author.toUpperCase();
+                    document.getElementById('downloadBtn').href = `/api/fetch_file?file_url=${encodeURIComponent(data.file_url)}&id=${data.id}&ext=${type}&author=${encodeURIComponent(data.author)}`;
+                    resultSection.classList.remove('hidden');
+                    setTimeout(refreshCursorListeners, 100);
+                } else { alert('⚡ CYBER ERROR: ' + data.message); }
+            } catch (error) { alert('⚡ SYSTEM ERROR: Connection failed.'); }
+            finally { submitBtn.innerText = 'LAUNCH EXTRACT'; submitBtn.disabled = false; }
+        });
     </script>
 </body>
 </html>
 """
-
-def get_tiktok_video(url):
-    try:
-        api_url = "https://www.tikwm.com/api/"
-        payload = {'url': url}
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
-        }
-        response = requests.post(api_url, data=payload, headers=headers)
-        data = response.json()
-        
-        if data.get('code') == 0:
-            return {
-                'success': True,
-                'title': data['data'].get('title', 'วิดีโอ TikTok'),
-                'video_nowatermark': data['data'].get('play'),
-                'music': data['data'].get('music')
-            }
-        return {'success': False, 'message': 'ไม่พบวิดีโอ หรือลิงก์ไม่ถูกต้อง'}
-    except Exception as e:
-        return {'success': False, 'message': f'เกิดข้อผิดพลาดในการเชื่อมต่อ: {str(e)}'}
 
 @app.route('/')
 def index():
@@ -227,10 +133,38 @@ def index():
 @app.route('/api/download', methods=['POST'])
 def download():
     video_url = request.form.get('url')
-    if not video_url:
-        return jsonify({'success': False, 'message': 'กรุณาใส่ลิงก์ TikTok'})
-    result = get_tiktok_video(video_url)
-    return jsonify(result)
+    download_type = request.form.get('type', 'mp4')
+    if not video_url: return jsonify({'success': False, 'message': 'กรุณาใส่ลิงก์'})
+    try:
+        api_url = "https://www.tikwm.com/api/"
+        response = requests.post(api_url, data={'url': video_url}, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
+        data = response.json()
+        if data.get('code') == 0 and 'data' in data:
+            res_data = data['data']
+            video_id = res_data.get('id', 'file')
+            author_info = res_data.get('author', {})
+            author_name = author_info.get('unique_id') or author_info.get('nickname') or "User"
+            author_name = re.sub(r'[^a-zA-Z0-9_\-]', '', author_name)
+            target_link = res_data.get('music') if download_type == 'mp3' else (res_data.get('hdplay') or res_data.get('play'))
+            if target_link:
+                if target_link.startswith('//'): target_link = 'https:' + target_link
+                elif not target_link.startswith('http'): target_link = 'https://www.tikwm.com' + target_link
+                return jsonify({'success': True, 'title': res_data.get('title', 'Video'), 'cover': res_data.get('cover', ''), 'file_url': target_link, 'id': video_id, 'author': author_name})
+        return jsonify({'success': False, 'message': 'ไม่พบข้อมูลคลิป'})
+    except Exception as e: return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/fetch_file')
+def fetch_file():
+    file_url = request.args.get('file_url')
+    file_id = request.args.get('id', 'file')
+    ext = request.args.get('ext', 'mp4')
+    author = request.args.get('author', 'User')
+    try:
+        req = requests.get(file_url, headers={'User-Agent': 'Mozilla/5.0'}, stream=True)
+        response = Response(req.iter_content(chunk_size=1024*1024), content_type=req.headers.get('Content-Type'))
+        response.headers['Content-Disposition'] = f'attachment; filename=@{author}_{file_id}.{ext}'
+        return response
+    except Exception as e: return str(e), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
