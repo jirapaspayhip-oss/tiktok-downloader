@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# เปลี่ยนลิงก์เพลงเป็นเพลงแดนซ์อันใหม่ล่าสุดของคุณเรียบร้อยแล้ว
+# แก้ไขลิงก์เป็นเพลงแดนซ์ใหม่ล่าสุดของคุณเรียบร้อยครับ
 MUSIC_URL = "https://audio.jofreestyler.com/api2/download/d1f8dae8499252a10cd2d6995ee74390/7636781163884973330.mp3"
 
 HTML_TEMPLATE = """
@@ -133,7 +133,6 @@ HTML_TEMPLATE = """
 </head>
 <body>
 
-    <!-- ดึงไฟล์เพลงจากลิงก์ด้านบนมาเล่นแบบวนลูปอัตโนมัติ -->
     <audio id="bg-music" autoplay loop>
         <source src="{{ music_url }}" type="audio/mpeg">
     </audio>
@@ -161,7 +160,7 @@ HTML_TEMPLATE = """
     <script>
         const audio = document.getElementById('bg-music');
 
-        // สั่งให้เพลงเริ่มเล่นทันทีเมื่อผู้ใช้คลิกเมาส์ส่วนไหนก็ได้ของหน้าจอครั้งแรก (เพื่อเลี่ยงกฎความปลอดภัยบราวเซอร์)
+        // สั่งให้เพลงเล่นทันทีเมื่อคลิกหน้าจอครั้งแรก ตามกฎของบราวเซอร์
         document.body.addEventListener('click', () => {
             if (audio.paused) {
                 audio.play().catch(e => console.log("Autoplay blocked"));
